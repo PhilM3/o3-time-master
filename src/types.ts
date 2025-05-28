@@ -142,7 +142,7 @@ export enum ActivityState {
  */
 export interface ActivityEvent {
   /** Type of activity that occurred */
-  type: 'text_change' | 'cursor_change' | 'window_focus' | 'window_blur';
+  type: 'text_change' | 'cursor_change' | 'window_focus' | 'window_blur' | 'sleep' | 'wake';
   
   /** Timestamp of the event */
   timestamp: Date;

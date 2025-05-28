@@ -15,14 +15,22 @@ export class ActivityMonitor {
   private readonly logger: Logger;
   private readonly config: ExtensionConfig;
   private activityCallbacks: Array<(event: ActivityEvent) => void> = [];
+  
+  // Sleep/Wake detection
+  private lastHeartbeat: Date;
+  private heartbeatInterval: NodeJS.Timeout | undefined;
+  private readonly HEARTBEAT_INTERVAL = 10000; // 10 seconds
+  private readonly SLEEP_THRESHOLD = 30000; // 30 seconds indicates potential sleep
 
   constructor(logger: Logger, config: ExtensionConfig) {
     this.logger = logger;
     this.config = config;
     this.lastActivity = new Date();
+    this.lastHeartbeat = new Date();
     this.isWindowFocused = vscode.window.state.focused;
     
     this.setupEventListeners();
+    this.setupSleepWakeDetection();
     this.logger.info('Activity monitor initialized', { 
       windowFocused: this.isWindowFocused,
       idleThreshold: config.idleThreshold 
@@ -35,13 +43,17 @@ export class ActivityMonitor {
   getCurrentState(): ActivityState {
     const idleThresholdMs = this.config.idleThreshold * 60 * 1000; // Convert minutes to milliseconds
     const timeSinceLastActivity = Date.now() - this.lastActivity.getTime();
-    const isIdle = timeSinceLastActivity > idleThresholdMs;
+    const timeSinceLastHeartbeat = Date.now() - this.lastHeartbeat.getTime();
+    
+    // If there's been a significant time gap, consider it as idle regardless of focus
+    const hasSleepGap = timeSinceLastHeartbeat > this.SLEEP_THRESHOLD;
+    const isIdle = timeSinceLastActivity > idleThresholdMs || hasSleepGap;
 
     if (this.isWindowFocused) {
       return isIdle ? ActivityState.IDLE_FOREGROUND : ActivityState.ACTIVE_FOREGROUND;
     } else {
       // In background - only active if there was recent activity and background tracking is enabled
-      if (this.config.trackBackground && !isIdle) {
+      if (this.config.trackBackground && !isIdle && !hasSleepGap) {
         return ActivityState.ACTIVE_BACKGROUND;
       }
       return ActivityState.INACTIVE;
@@ -104,6 +116,12 @@ export class ActivityMonitor {
    * Dispose all event listeners
    */
   dispose(): void {
+    // Clear heartbeat interval
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = undefined;
+    }
+    
     this.subscriptions.forEach(subscription => subscription.dispose());
     this.subscriptions.length = 0;
     this.activityCallbacks.length = 0;
@@ -122,11 +140,6 @@ export class ActivityMonitor {
     // Cursor/selection changes
     this.subscriptions.push(
       vscode.window.onDidChangeTextEditorSelection(this.onSelectionChange.bind(this))
-    );
-
-    // Window focus changes
-    this.subscriptions.push(
-      vscode.window.onDidChangeWindowState(this.onWindowStateChange.bind(this))
     );
 
     // Active editor changes
@@ -201,24 +214,6 @@ export class ActivityMonitor {
       selections: event.selections.length,
       isManual: isManual
     });
-  }
-
-  /**
-   * Handle window state changes (focus/blur)
-   */
-  private onWindowStateChange(state: vscode.WindowState): void {
-    const wasFocused = this.isWindowFocused;
-    this.isWindowFocused = state.focused;
-
-    if (wasFocused !== state.focused) {
-      this.recordActivity({
-        type: state.focused ? 'window_focus' : 'window_blur',
-        timestamp: new Date(),
-        data: { focused: state.focused }
-      });
-
-      this.logger.info('Window focus changed', { focused: state.focused });
-    }
   }
 
   /**
@@ -302,5 +297,118 @@ export class ActivityMonitor {
    */
   private getFileName(uri: vscode.Uri): string {
     return uri.path.split('/').pop() || uri.toString();
+  }
+
+  /**
+   * Setup sleep/wake detection
+   */
+  private setupSleepWakeDetection(): void {
+    this.heartbeatInterval = setInterval(() => this.checkSleepWake(), this.HEARTBEAT_INTERVAL);
+    
+    // Setup Page Visibility API for better sleep detection
+    this.setupPageVisibilityDetection();
+    this.logger.debug('Sleep/wake detection setup complete');
+  }
+
+  /**
+   * Setup Page Visibility API detection
+   */
+  private setupPageVisibilityDetection(): void {
+    // Note: VS Code extensions run in Node.js context, not browser context
+    // So we rely on alternative detection methods like window focus events
+    // and time gap detection
+    
+    // Enhanced window focus detection for sleep/wake scenarios
+    this.subscriptions.push(
+      vscode.window.onDidChangeWindowState((state) => {
+        this.onWindowStateChangeEnhanced(state);
+      })
+    );
+  }
+
+  /**
+   * Enhanced window state change handler with sleep/wake detection
+   */
+  private onWindowStateChangeEnhanced(state: vscode.WindowState): void {
+    const wasFocused = this.isWindowFocused;
+    this.isWindowFocused = state.focused;
+    const now = new Date();
+
+    if (wasFocused !== state.focused) {
+      // Check for potential wake event (long gap + focus gained)
+      if (state.focused && !wasFocused) {
+        const timeSinceLastActivity = now.getTime() - this.lastActivity.getTime();
+        const timeSinceLastHeartbeat = now.getTime() - this.lastHeartbeat.getTime();
+        
+        // If it's been a long time since last activity, treat this as a wake event
+        if (timeSinceLastActivity > this.SLEEP_THRESHOLD || timeSinceLastHeartbeat > this.SLEEP_THRESHOLD) {
+          this.recordActivity({
+            type: 'wake',
+            timestamp: now,
+            data: { 
+              focused: state.focused,
+              timeSinceLastActivity: timeSinceLastActivity,
+              timeSinceLastHeartbeat: timeSinceLastHeartbeat
+            }
+          });
+          
+          this.logger.info('Wake event detected (window focus regained after long period)', {
+            timeSinceLastActivity: Math.round(timeSinceLastActivity / 1000),
+            timeSinceLastHeartbeat: Math.round(timeSinceLastHeartbeat / 1000)
+          });
+        }
+      }
+      
+      // Normal window focus/blur event
+      this.recordActivity({
+        type: state.focused ? 'window_focus' : 'window_blur',
+        timestamp: now,
+        data: { focused: state.focused }
+      });
+
+      this.logger.info('Window focus changed', { focused: state.focused });
+    }
+  }
+
+  /**
+   * Check sleep/wake status with enhanced detection
+   */
+  private checkSleepWake(): void {
+    const now = new Date();
+    const timeSinceLastHeartbeat = now.getTime() - this.lastHeartbeat.getTime();
+    
+    // Detect potential sleep - significant time gap in heartbeat
+    if (timeSinceLastHeartbeat > this.SLEEP_THRESHOLD) {
+      // First, record the sleep event
+      this.recordActivity({
+        type: 'sleep',
+        timestamp: new Date(this.lastHeartbeat.getTime() + this.HEARTBEAT_INTERVAL),
+        data: {
+          timeSinceLastHeartbeat: timeSinceLastHeartbeat,
+          detectionMethod: 'heartbeat_gap'
+        }
+      });
+
+      this.logger.info('Sleep detected (heartbeat gap)', {
+        timeSinceLastHeartbeat: Math.round(timeSinceLastHeartbeat / 1000),
+        lastHeartbeat: this.lastHeartbeat.toISOString()
+      });
+
+      // Then record the wake event for the current moment
+      this.recordActivity({
+        type: 'wake',
+        timestamp: now,
+        data: {
+          timeSinceLastHeartbeat: timeSinceLastHeartbeat,
+          detectionMethod: 'heartbeat_resume'
+        }
+      });
+
+      this.logger.info('Wake detected (heartbeat resumed)', {
+        timeSinceLastHeartbeat: Math.round(timeSinceLastHeartbeat / 1000)
+      });
+    }
+
+    this.lastHeartbeat = now;
   }
 } 

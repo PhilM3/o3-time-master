@@ -6,6 +6,7 @@ Eine intelligente Zeiterfassungs-Extension für VS Code mit projektbasiertem Tra
 
 ### ⏱️ Automatische Zeiterfassung
 - **Intelligente Aktivitätserkennung**: Automatisches Starten/Pausieren basierend auf Ihrer Aktivität
+- **Sleep/Wake-Erkennung**: Automatisches Pausieren beim Laptop-Zuklappen und Wiederaufnehmen beim Aufwachen
 - **Projektbasiertes Tracking**: Separate Zeiterfassung für verschiedene Projekte/Workspaces
 - **Hintergrund-Tracking**: Erfassung auch bei Cursor Agent und anderen automatisierten Aktivitäten
 - **Idle-Erkennung**: Automatisches Pausieren bei Inaktivität
@@ -165,6 +166,13 @@ Dieses Projekt steht unter der MIT-Lizenz. Siehe [LICENSE](LICENSE) für Details
 Probleme und Feature-Requests können über [GitHub Issues](https://github.com/your-username/o3-time-tracker/issues) gemeldet werden.
 
 ## 📊 Changelog
+
+### Version 1.0.1
+- 🐛 **Bugfix**: Sleep/Wake-Erkennung hinzugefügt - verhindert Zeit-Tracking beim Laptop-Zuklappen
+- ✅ Automatisches Pausieren bei System-Sleep (z.B. Laptop zuklappen)
+- ✅ Automatisches Wiederaufnehmen bei System-Wake
+- ✅ Erkennung von Zeit-Lücken durch Heartbeat-Monitoring
+- ✅ Verbesserte Idle-Detection mit Sleep-Awareness
 
 ### Version 1.0.0
 - ✅ Automatische Zeiterfassung mit Aktivitätserkennung

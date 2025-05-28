@@ -2,7 +2,7 @@
   "name": "o3-time-tracker",
   "displayName": "O3 Time Tracker",
   "description": "Project-based time tracking for VS Code with intelligent activity detection",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "publisher": "o3-dev",
   "engines": {
     "vscode": "^1.74.0"

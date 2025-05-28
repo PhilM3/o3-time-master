@@ -672,14 +672,65 @@ export class TimeTracker {
   }
 
   /**
-   * Handle activity events
+   * Handle activity events from the monitor
    */
   private async onActivity(event: ActivityEvent): Promise<void> {
-    if (!this.isRunning || this.isPaused) {
+    if (!this.isRunning) {
       return;
     }
 
     try {
+      // Handle sleep/wake events first
+      if (event.type === 'sleep') {
+        this.logger.info('Sleep event detected - automatically pausing tracking', { 
+          timestamp: event.timestamp.toISOString() 
+        });
+        
+        // Auto-pause tracking during sleep
+        if (this.trackingData.currentSession && !this.isPaused) {
+          // End the session at the sleep time, not current time
+          if (this.trackingData.currentSession.isActive) {
+            const sleepTime = event.timestamp;
+            const timeSinceLastActivity = sleepTime.getTime() - this.trackingData.currentSession.lastActiveTime.getTime();
+            
+            // Only add active time if user was actually active before sleep
+            if (timeSinceLastActivity < (this.config.idleThreshold * 60 * 1000)) {
+              this.trackingData.currentSession.totalTime += timeSinceLastActivity;
+            }
+            
+            this.trackingData.currentSession.isActive = false;
+            this.trackingData.currentSession.lastActivity = sleepTime;
+          }
+          this.isPaused = true;
+          this.updateStatusBar();
+        }
+        return;
+      }
+      
+      if (event.type === 'wake') {
+        this.logger.info('Wake event detected - resuming tracking', { 
+          timestamp: event.timestamp.toISOString() 
+        });
+        
+        // Auto-resume tracking after wake
+        if (this.isPaused && this.trackingData.currentSession) {
+          this.isPaused = false;
+          this.trackingData.currentSession.isActive = true;
+          this.trackingData.currentSession.lastActivity = event.timestamp;
+          this.trackingData.currentSession.lastActiveTime = event.timestamp;
+          this.updateStatusBar();
+        } else if (this.config.autoStart && !this.trackingData.currentSession) {
+          // Start new session if auto-start is enabled and no current session
+          await this.startOrResumeSession();
+        }
+        return;
+      }
+
+      // Skip regular activity processing if paused
+      if (this.isPaused) {
+        return;
+      }
+
       // Update activity counters in current session
       if (this.trackingData.currentSession) {
         const now = new Date();
