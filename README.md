@@ -1,189 +1,87 @@
 # O3 Time Tracker
 
-Eine intelligente Zeiterfassungs-Extension für VS Code mit projektbasiertem Tracking und automatischer Aktivitätserkennung.
+A VS Code extension for automatic time tracking with intelligent activity detection and project-based tracking.
 
-## 🚀 Features
+## ✨ Features
 
-### ⏱️ Automatische Zeiterfassung
-- **Intelligente Aktivitätserkennung**: Automatisches Starten/Pausieren basierend auf Ihrer Aktivität
-- **Sleep/Wake-Erkennung**: Automatisches Pausieren beim Laptop-Zuklappen und Wiederaufnehmen beim Aufwachen
-- **Projektbasiertes Tracking**: Separate Zeiterfassung für verschiedene Projekte/Workspaces
-- **Hintergrund-Tracking**: Erfassung auch bei Cursor Agent und anderen automatisierten Aktivitäten
-- **Idle-Erkennung**: Automatisches Pausieren bei Inaktivität
+- **Automatic Time Tracking**: Smart activity detection with auto start/pause
+- **Sleep/Wake Detection**: Automatically pauses when laptop sleeps and resumes on wake
+- **Project-Based Tracking**: Separate time tracking for different workspaces
+- **Real-time Sidebar**: Live overview of current session and daily summary
+- **Detailed Reports**: Work session logs with start/end times and activity counters
+- **Local Data Storage**: All data stored locally in JSON format
+- **Background Tracking**: Works with Cursor Agent and other automated activities
 
-### 📊 Primary Sidebar
-- **Echtzeit-Übersicht**: Live-Anzeige der aktuellen Session
-- **Tagesübersicht**: Alle heutigen Arbeitssessions auf einen Blick
-- **Projektübersicht**: Gesamtzeit und Sessions pro Projekt
-- **Schnellzugriff**: Start/Pause/Stop-Buttons direkt in der Sidebar
+## 🚀 Installation
 
-### 📈 Detaillierte Berichte
-- **Arbeitszeit-Log**: Detaillierte Übersicht mit Start-/Endzeiten (z.B. 09:13-10:35)
-- **Aktivitätszähler**: Textänderungen und Cursor-Bewegungen pro Session
-- **Tagesberichte**: Zusammenfassung aller Sessions eines Tages
-- **Projektstatistiken**: Gesamtzeit, durchschnittliche Session-Dauer, aktive Tage
+1. Install from VS Code Marketplace: `O3 Time Tracker`
+2. Extension starts automatically when opening VS Code
 
-### 💾 Lokale Datenspeicherung
-- **Permanente Speicherung**: Alle Daten werden lokal in `timeTrackingData.json` gespeichert
-- **Auto-Save**: Automatisches Speichern alle 30 Sekunden
-- **Export-Funktion**: Daten als JSON exportieren
+## 📱 Usage
 
-### 🌐 Globale Zusammenfassung
-- **Projektübergreifende Auswertung**: Zusammenfassung aller Tracking-Daten aus verschiedenen Workspaces
-- **Workspace-Isolation**: Jeder Workspace behält seine eigenen Daten, aber globale Übersicht möglich
-- **Heute-Übersicht**: Heutige Arbeitszeit über alle Projekte hinweg
-- **Automatische Aggregation**: Intelligente Zusammenführung von Daten aus allen Workspace-Ordnern
-- **Cache-System**: Optimierte Performance durch 30-Sekunden-Cache
+### Primary Sidebar
+Click the clock icon (⏰) in the Activity Bar to access:
+- ▶️ Start/⏸️ Pause/⏹️ Stop buttons
+- Current session timer
+- Today's sessions overview
+- Project statistics
 
-## 🎯 Verwendung
-
-### Installation
-1. Extension in VS Code installieren
-2. Automatischer Start beim Öffnen von VS Code
-
-### Grundlegende Bedienung
-
-#### Über die Primary Sidebar
-1. Klicken Sie auf das Uhr-Symbol (⏰) in der Activity Bar
-2. Verwenden Sie die Toolbar-Buttons:
-   - ▶️ **Start**: Zeiterfassung starten
-   - ⏸️ **Pause**: Zeiterfassung pausieren
-   - ⏹️ **Stop**: Zeiterfassung beenden
-   - 🔄 **Refresh**: Ansicht aktualisieren
-
-#### Über Befehle (Ctrl+Shift+P)
+### Commands (Ctrl+Shift+P)
 - `Time Tracker: Start Time Tracking`
 - `Time Tracker: Pause Time Tracking`
 - `Time Tracker: Stop Time Tracking`
 - `Time Tracker: Show Detailed Time Log`
-- `Time Tracker: Show Today's Sessions`
-- `Time Tracker: Show Project Statistics`
-- `Time Tracker: Export Time Data`
 
-#### Über Tastenkürzel
-- `Ctrl+Alt+T` (Mac: `Cmd+Alt+T`): Zeiterfassung starten
-- `Ctrl+Alt+P` (Mac: `Cmd+Alt+P`): Zeiterfassung pausieren
+### Keyboard Shortcuts
+- `Ctrl+Alt+T` (`Cmd+Alt+T` on Mac): Start tracking
+- `Ctrl+Alt+P` (`Cmd+Alt+P` on Mac): Pause tracking
 
-### Status Bar
-Die aktuelle Session wird in der Status Bar angezeigt:
-- `⏱ 1h 23m` - Aktive Session mit Zeitanzeige
-- `⏸ Paused` - Pausierte Session
-- `⏱ Ready` - Bereit zum Starten
+## ⚙️ Configuration
 
-## ⚙️ Konfiguration
+Available settings in VS Code preferences:
 
-Öffnen Sie die VS Code Einstellungen und suchen Sie nach "O3 Time Tracker":
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `o3-time-tracker.idleThreshold` | 5 | Minutes of inactivity before pausing |
+| `o3-time-tracker.autoStart` | true | Auto-start on detected activity |
+| `o3-time-tracker.showInStatusBar` | true | Show timer in status bar |
+| `o3-time-tracker.saveInterval` | 30 | Auto-save interval in seconds |
 
-```json
-{
-  "o3-time-tracker.idleThreshold": 5,
-  "o3-time-tracker.autoStart": true,
-  "o3-time-tracker.showInStatusBar": true,
-  "o3-time-tracker.saveInterval": 30,
-  "o3-time-tracker.trackBackground": true
-}
-```
+## 🔧 Development
 
-### Verfügbare Einstellungen
-
-| Einstellung | Standard | Beschreibung |
-|-------------|----------|--------------|
-| `idleThreshold` | 5 | Minuten Inaktivität bis Session als idle gilt |
-| `autoStart` | true | Automatisches Starten bei erkannter Aktivität |
-| `showInStatusBar` | true | Zeitanzeige in der Status Bar |
-| `saveInterval` | 30 | Auto-Save Intervall in Sekunden |
-| `trackBackground` | true | Tracking auch bei Hintergrund-Aktivitäten |
-
-## 📁 Datenstruktur
-
-Die Tracking-Daten werden in `~/.vscode/extensions/o3-time-tracker/timeTrackingData.json` gespeichert:
-
-```json
-{
-  "version": "1.0.0",
-  "lastSaved": "2024-01-15T10:30:00.000Z",
-  "totalTimeTracked": 28800000,
-  "projects": [
-    {
-      "projectName": "My Project",
-      "projectPath": "/path/to/project",
-      "totalTime": 14400000,
-      "sessions": [
-        {
-          "id": "1705312200000-abc123",
-          "startTime": "2024-01-15T09:00:00.000Z",
-          "endTime": "2024-01-15T13:00:00.000Z",
-          "totalTime": 14400000,
-          "textChanges": 156,
-          "cursorMovements": 423
-        }
-      ]
-    }
-  ]
-}
-```
-
-## 🔧 Entwicklung
-
-### Voraussetzungen
-- Node.js 16+
-- VS Code 1.74+
-
-### Setup
 ```bash
-git clone <repository-url>
+git clone https://github.com/PhilM3/o3-time-tracker.git
 cd o3-time-tracker
 npm install
 npm run compile
 ```
 
-### Entwicklung
+Test the extension:
 ```bash
-npm run compile:watch  # TypeScript im Watch-Modus
-code --extensionDevelopmentPath=. --new-window  # Extension testen
+code --extensionDevelopmentPath=. --new-window
 ```
 
-### Build
-```bash
-npm run compile  # TypeScript kompilieren
-npm run lint     # Code-Qualität prüfen
-```
+## 📊 Data Storage
 
-## 🤝 Beitragen
+Time tracking data is stored locally in:
+`~/.vscode/extensions/o3-time-tracker/timeTrackingData.json`
 
-1. Fork des Repositories
-2. Feature Branch erstellen (`git checkout -b feature/amazing-feature`)
-3. Änderungen committen (`git commit -m 'Add amazing feature'`)
-4. Branch pushen (`git push origin feature/amazing-feature`)
-5. Pull Request erstellen
+## 🤝 Contributing
 
-## 📝 Lizenz
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-Dieses Projekt steht unter der MIT-Lizenz. Siehe [LICENSE](LICENSE) für Details.
+## 📝 License
 
-## 🐛 Probleme melden
+MIT License - see [LICENSE](LICENSE) file for details.
 
-Probleme und Feature-Requests können über [GitHub Issues](https://github.com/your-username/o3-time-tracker/issues) gemeldet werden.
+## 🐛 Issues
 
-## 📊 Changelog
-
-### Version 1.0.1
-- 🐛 **Bugfix**: Sleep/Wake-Erkennung hinzugefügt - verhindert Zeit-Tracking beim Laptop-Zuklappen
-- ✅ Automatisches Pausieren bei System-Sleep (z.B. Laptop zuklappen)
-- ✅ Automatisches Wiederaufnehmen bei System-Wake
-- ✅ Erkennung von Zeit-Lücken durch Heartbeat-Monitoring
-- ✅ Verbesserte Idle-Detection mit Sleep-Awareness
-
-### Version 1.0.0
-- ✅ Automatische Zeiterfassung mit Aktivitätserkennung
-- ✅ Primary Sidebar mit Echtzeit-Übersicht
-- ✅ Detaillierte Arbeitszeit-Logs mit Start-/Endzeiten
-- ✅ Projektbasiertes Tracking
-- ✅ Lokale Datenspeicherung
-- ✅ Export-Funktionalität
-- ✅ Hintergrund-Tracking für Cursor Agent
-- ✅ Deutsche Lokalisierung
+Report bugs and feature requests via [GitHub Issues](https://github.com/PhilM3/o3-time-tracker/issues).
 
 ---
 
-**Viel Spaß beim Tracken Ihrer Arbeitszeit! ⏰** 
+**Happy time tracking! ⏰** 
