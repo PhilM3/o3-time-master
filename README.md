@@ -14,8 +14,22 @@ A VS Code extension for automatic time tracking with intelligent activity detect
 
 ## 🚀 Installation
 
-1. Install from VS Code Marketplace: `O3 Time Tracker`
-2. Extension starts automatically when opening VS Code
+### Option 1: Install from VSIX package
+1. Download the latest `.vsix` file from the [Releases](https://github.com/PhilM3/o3-time-tracker/releases) page
+2. Open VS Code
+3. Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on Mac) to open the command palette
+4. Type "Extensions: Install from VSIX..." and select it
+5. Browse and select the downloaded `.vsix` file
+6. Restart VS Code
+
+### Option 2: Install from source
+1. Clone this repository
+2. Run `npm install` and `npm run compile`
+3. Open VS Code and go to Extensions view (`Ctrl+Shift+X`)
+4. Click "..." menu and select "Install from VSIX..."
+5. Navigate to the project folder and select the generated `.vsix` file
+
+The extension starts automatically when opening VS Code.
 
 ## 📱 Usage
 
