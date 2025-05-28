@@ -1,0 +1,231 @@
+{
+  "name": "o3-time-tracker",
+  "displayName": "O3 Time Tracker",
+  "description": "Project-based time tracking for VS Code with intelligent activity detection",
+  "version": "1.0.0",
+  "publisher": "o3-dev",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "time tracking",
+    "productivity",
+    "project management",
+    "statistics"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "o3-time-tracker.start",
+        "title": "Start Time Tracking",
+        "category": "Time Tracker"
+      },
+      {
+        "command": "o3-time-tracker.pause",
+        "title": "Pause Time Tracking",
+        "category": "Time Tracker"
+      },
+      {
+        "command": "o3-time-tracker.stop",
+        "title": "Stop Time Tracking",
+        "category": "Time Tracker"
+      },
+      {
+        "command": "o3-time-tracker.reset",
+        "title": "Reset Current Session",
+        "category": "Time Tracker"
+      },
+      {
+        "command": "o3-time-tracker.showStats",
+        "title": "Show Project Statistics",
+        "category": "Time Tracker"
+      },
+      {
+        "command": "o3-time-tracker.export",
+        "title": "Export Time Data",
+        "category": "Time Tracker"
+      },
+      {
+        "command": "o3-time-tracker.showDetailedTimeLog",
+        "title": "Show Detailed Time Log",
+        "category": "Time Tracker"
+      },
+      {
+        "command": "o3-time-tracker.showTodaysSessions",
+        "title": "Show Today's Sessions",
+        "category": "Time Tracker"
+      },
+      {
+        "command": "o3-time-tracker.refreshTimeView",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "o3-time-tracker.startFromView",
+        "title": "Start Tracking",
+        "icon": "$(play)"
+      },
+      {
+        "command": "o3-time-tracker.pauseFromView",
+        "title": "Pause Tracking",
+        "icon": "$(debug-pause)"
+      },
+      {
+        "command": "o3-time-tracker.stopFromView",
+        "title": "Stop Tracking",
+        "icon": "$(stop)"
+      },
+      {
+        "command": "o3-time-tracker.refreshGlobalSummary",
+        "title": "Refresh Global Summary",
+        "icon": "$(refresh)"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "o3-time-tracker.start",
+        "key": "ctrl+alt+t",
+        "mac": "cmd+alt+t"
+      },
+      {
+        "command": "o3-time-tracker.pause",
+        "key": "ctrl+alt+p",
+        "mac": "cmd+alt+p"
+      }
+    ],
+    "configuration": {
+      "title": "O3 Time Tracker",
+      "properties": {
+        "o3-time-tracker.idleThreshold": {
+          "type": "number",
+          "default": 5,
+          "minimum": 1,
+          "maximum": 60,
+          "description": "Minutes of inactivity before considering the session idle"
+        },
+        "o3-time-tracker.autoStart": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically start tracking when activity is detected"
+        },
+        "o3-time-tracker.showInStatusBar": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show current session time in status bar"
+        },
+        "o3-time-tracker.saveInterval": {
+          "type": "number",
+          "default": 30,
+          "minimum": 10,
+          "maximum": 300,
+          "description": "Auto-save interval in seconds"
+        },
+        "o3-time-tracker.trackBackground": {
+          "type": "boolean",
+          "default": true,
+          "description": "Continue tracking when VS Code is in background but files are being modified"
+        }
+      }
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "o3-time-tracker",
+          "title": "Time Tracker",
+          "icon": "$(clock)"
+        }
+      ]
+    },
+    "views": {
+      "o3-time-tracker": [
+        {
+          "id": "o3-time-tracker.timeView",
+          "name": "Arbeitszeiten",
+          "when": "true"
+        },
+        {
+          "id": "o3-time-tracker.projectsView",
+          "name": "Projekte",
+          "when": "true"
+        },
+        {
+          "id": "o3-time-tracker.globalSummaryView",
+          "name": "Globale Zusammenfassung",
+          "when": "true"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "o3-time-tracker.refreshTimeView",
+          "when": "view == o3-time-tracker.timeView",
+          "group": "navigation"
+        },
+        {
+          "command": "o3-time-tracker.startFromView",
+          "when": "view == o3-time-tracker.timeView",
+          "group": "navigation"
+        },
+        {
+          "command": "o3-time-tracker.pauseFromView",
+          "when": "view == o3-time-tracker.timeView",
+          "group": "navigation"
+        },
+        {
+          "command": "o3-time-tracker.stopFromView",
+          "when": "view == o3-time-tracker.timeView",
+          "group": "navigation"
+        },
+        {
+          "command": "o3-time-tracker.refreshGlobalSummary",
+          "when": "view == o3-time-tracker.globalSummaryView",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "o3-time-tracker.export",
+          "when": "view == o3-time-tracker.projectsView",
+          "group": "inline"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "compile:watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.74.0",
+    "@types/node": "16.x",
+    "@typescript-eslint/eslint-plugin": "^5.45.0",
+    "@typescript-eslint/parser": "^5.45.0",
+    "eslint": "^8.28.0",
+    "typescript": "^4.9.4"
+  },
+  "dependencies": {},
+  "galleryBanner": {
+    "color": "#0066cc",
+    "theme": "dark"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/o3-time-tracker.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/o3-time-tracker/issues"
+  },
+  "homepage": "https://github.com/your-username/o3-time-tracker#readme"
+} 
