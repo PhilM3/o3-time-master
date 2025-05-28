@@ -1,4 +1,4 @@
-# O3 Time Tracker
+# o3-time-master
 
 A VS Code extension for automatic time tracking with intelligent activity detection and project-based tracking.
 
