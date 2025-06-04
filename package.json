@@ -131,6 +131,18 @@
           "type": "boolean",
           "default": true,
           "description": "Continue tracking when VS Code is in background but files are being modified"
+        },
+        "o3-time-tracker.autoEndSessionAfterIdle": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically end sessions after idle time threshold is reached"
+        },
+        "o3-time-tracker.autoEndIdleThreshold": {
+          "type": "number",
+          "default": 30,
+          "minimum": 5,
+          "maximum": 240,
+          "description": "Minutes of idle time before automatically ending a session"
         }
       }
     },

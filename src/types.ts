@@ -118,6 +118,12 @@ export interface ExtensionConfig {
   
   /** Whether to track when VS Code is in background */
   trackBackground: boolean;
+  
+  /** Whether to automatically end sessions after idle time */
+  autoEndSessionAfterIdle: boolean;
+  
+  /** Minutes of idle time before automatically ending a session */
+  autoEndIdleThreshold: number;
 }
 
 /**

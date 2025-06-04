@@ -92,6 +92,9 @@ export function activate(context: vscode.ExtensionContext): void {
     // Register command handlers
     registerCommands(context);
 
+    // Setup lifecycle event handlers for session management
+    setupLifecycleHandlers(context);
+
     // Start the time tracker
     timeTracker.start();
 
@@ -107,13 +110,15 @@ export function activate(context: vscode.ExtensionContext): void {
 /**
  * Called when the extension is deactivated
  */
-export function deactivate(): void {
+export async function deactivate(): Promise<void> {
   logger?.info('O3 Time Tracker extension is being deactivated');
 
   try {
-    // Stop the time tracker and clean up
-    timeTracker?.stop();
-    timeTracker?.dispose();
+    // Stop the time tracker and clean up - ensure sessions are properly ended
+    if (timeTracker) {
+      await timeTracker.stop();
+      timeTracker.dispose();
+    }
     
     logger?.info('O3 Time Tracker extension deactivated successfully');
   } catch (error) {
@@ -122,6 +127,9 @@ export function deactivate(): void {
     logger?.dispose();
     timeTracker = undefined;
     logger = undefined;
+    timeViewProvider = undefined;
+    projectsViewProvider = undefined;
+    globalSummaryViewProvider = undefined;
   }
 }
 
@@ -277,4 +285,57 @@ function registerCommands(context: vscode.ExtensionContext): void {
   commands.forEach(command => context.subscriptions.push(command));
 
   logger?.info(`Registered ${commands.length} commands`);
+}
+
+/**
+ * Setup lifecycle event handlers for better session management
+ */
+function setupLifecycleHandlers(context: vscode.ExtensionContext): void {
+  if (!timeTracker || !logger) {
+    return;
+  }
+
+  try {
+    // Handle process exit events
+    const handleProcessExit = async () => {
+      logger?.info('Process exit detected - stopping time tracker');
+      try {
+        await timeTracker?.stop();
+      } catch (error) {
+        logger?.error('Error stopping time tracker during process exit', error as Error);
+      }
+    };
+
+    // Register process exit handlers
+    process.on('exit', handleProcessExit);
+    process.on('SIGINT', handleProcessExit);
+    process.on('SIGTERM', handleProcessExit);
+    process.on('beforeExit', handleProcessExit);
+
+    // Handle window state changes for better focus tracking
+    context.subscriptions.push(
+      vscode.window.onDidChangeWindowState(async (windowState) => {
+        if (!windowState.focused) {
+          logger?.debug('Window lost focus');
+          // The activity monitor will handle this, but we log it for debugging
+        } else {
+          logger?.debug('Window gained focus');
+        }
+      })
+    );
+
+    // Clean up process handlers when extension is deactivated
+    context.subscriptions.push({
+      dispose: () => {
+        process.removeListener('exit', handleProcessExit);
+        process.removeListener('SIGINT', handleProcessExit);
+        process.removeListener('SIGTERM', handleProcessExit);
+        process.removeListener('beforeExit', handleProcessExit);
+      }
+    });
+
+    logger.info('Lifecycle handlers setup completed');
+  } catch (error) {
+    logger.error('Failed to setup lifecycle handlers', error as Error);
+  }
 } 

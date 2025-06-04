@@ -641,6 +641,11 @@ export class TimeTracker {
         await this.checkAndHandleMidnightCrossing();
       }
 
+      // Check for auto-end session after idle time
+      if (this.config.autoEndSessionAfterIdle && this.trackingData.currentSession && !this.isPaused) {
+        await this.checkAndHandleIdleSessionEnd();
+      }
+
       // Update current session time if active
       if (this.trackingData.currentSession && !this.isPaused) {
         const isActive = this.activityMonitor.isActive();
@@ -682,26 +687,48 @@ export class TimeTracker {
     try {
       // Handle sleep/wake events first
       if (event.type === 'sleep') {
-        this.logger.info('Sleep event detected - automatically pausing tracking', { 
+        this.logger.info('Sleep event detected - automatically ending session', { 
           timestamp: event.timestamp.toISOString() 
         });
         
-        // Auto-pause tracking during sleep
+        // Auto-end session during sleep if configured
         if (this.trackingData.currentSession && !this.isPaused) {
-          // End the session at the sleep time, not current time
-          if (this.trackingData.currentSession.isActive) {
-            const sleepTime = event.timestamp;
-            const timeSinceLastActivity = sleepTime.getTime() - this.trackingData.currentSession.lastActiveTime.getTime();
-            
-            // Only add active time if user was actually active before sleep
-            if (timeSinceLastActivity < (this.config.idleThreshold * 60 * 1000)) {
-              this.trackingData.currentSession.totalTime += timeSinceLastActivity;
+          if (this.config.autoEndSessionAfterIdle) {
+            // End the session at the sleep time, not current time
+            if (this.trackingData.currentSession.isActive) {
+              const sleepTime = event.timestamp;
+              const timeSinceLastActivity = sleepTime.getTime() - this.trackingData.currentSession.lastActiveTime.getTime();
+              
+              // Only add active time if user was actually active before sleep
+              if (timeSinceLastActivity < (this.config.idleThreshold * 60 * 1000)) {
+                this.trackingData.currentSession.totalTime += timeSinceLastActivity;
+              }
+              
+              // Set end time to sleep time instead of current time
+              this.trackingData.currentSession.endTime = sleepTime;
+              this.trackingData.currentSession.isActive = false;
+              this.trackingData.currentSession.lastActivity = sleepTime;
+              
+              // Update project stats
+              const projectStats = this.trackingData.projects.get(this.trackingData.currentSession.projectPath);
+              if (projectStats) {
+                this.recalculateProjectStats(projectStats);
+              }
+              
+              const sessionDuration = this.trackingData.currentSession.totalTime;
+              delete this.trackingData.currentSession;
+              await this.storage.save(this.trackingData);
+              
+              this.logger.info('Session ended due to sleep', { 
+                duration: formatDetailedTime(sessionDuration) 
+              });
             }
-            
+          } else {
+            // Just pause if auto-end is disabled
             this.trackingData.currentSession.isActive = false;
-            this.trackingData.currentSession.lastActivity = sleepTime;
+            this.trackingData.currentSession.lastActivity = event.timestamp;
+            this.isPaused = true;
           }
-          this.isPaused = true;
           this.updateStatusBar();
         }
         return;
@@ -898,7 +925,9 @@ export class TimeTracker {
       autoStart: config.get('autoStart', true),
       showInStatusBar: config.get('showInStatusBar', true),
       saveInterval: config.get('saveInterval', 30),
-      trackBackground: config.get('trackBackground', true)
+      trackBackground: config.get('trackBackground', true),
+      autoEndSessionAfterIdle: config.get('autoEndSessionAfterIdle', true),
+      autoEndIdleThreshold: config.get('autoEndIdleThreshold', 30)
     };
   }
 
@@ -1116,5 +1145,22 @@ export class TimeTracker {
       projectName: newSession.projectName,
       startTime: newSession.startTime.toISOString()
     });
+  }
+
+  /**
+   * Check for auto-end session after idle time
+   */
+  private async checkAndHandleIdleSessionEnd(): Promise<void> {
+    if (!this.trackingData.currentSession) {
+      return;
+    }
+
+    const now = new Date();
+    const idleThreshold = this.config.autoEndIdleThreshold * 60 * 1000; // Convert minutes to milliseconds
+    
+    const timeSinceLastActivity = now.getTime() - this.trackingData.currentSession.lastActiveTime.getTime();
+    if (timeSinceLastActivity > idleThreshold) {
+      await this.endCurrentSession();
+    }
   }
 } 

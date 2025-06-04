@@ -215,22 +215,76 @@ export class GlobalSummaryViewProvider implements vscode.TreeDataProvider<Global
     const items: GlobalSummaryItem[] = [];
 
     const projects = Array.from(data.allProjects.values())
-      .sort((a, b) => b.totalTime - a.totalTime);
+      .sort((a, b) => {
+        const totalTimeA = this.calculateActualProjectTime(a, data);
+        const totalTimeB = this.calculateActualProjectTime(b, data);
+        return totalTimeB - totalTimeA;
+      });
 
     projects.forEach(project => {
+      const actualTotalTime = this.calculateActualProjectTime(project, data);
       const lastActivity = project.lastActivity.toLocaleDateString('de-DE');
+      const completedSessions = project.sessions.filter(s => s.endTime).length;
+      const ongoingSessions = project.sessions.filter(s => !s.endTime).length;
+      
+      // Create detailed tooltip
+      let tooltip = `Gesamtzeit aller Sessions: ${formatDetailedTime(actualTotalTime)}\n`;
+      tooltip += `${project.sessions.length} Sessions total (${completedSessions} abgeschlossen`;
+      if (ongoingSessions > 0) {
+        tooltip += `, ${ongoingSessions} laufend`;
+      }
+      tooltip += `)\nZuletzt aktiv: ${lastActivity}`;
       
       items.push(new GlobalSummaryItem(
         project.projectName,
         vscode.TreeItemCollapsibleState.None,
         'global-project',
-        `${formatDetailedTime(project.totalTime)} - ${project.sessions.length} Sessions - Zuletzt: ${lastActivity}`,
-        formatDetailedTime(project.totalTime),
+        tooltip,
+        formatDetailedTime(actualTotalTime),
         new vscode.ThemeIcon('folder')
       ));
     });
 
     return items;
+  }
+
+  /**
+   * Calculate the actual total time for a project by summing all sessions
+   * and including any current active session for this project
+   */
+  private calculateActualProjectTime(project: ProjectStats, data: AggregatedData): number {
+    // Sum all session times
+    let totalTime = 0;
+    
+    project.sessions.forEach(session => {
+      totalTime += session.totalTime;
+    });
+
+    // Check if there's a current session for this project
+    // We need to find the workspace that contains this project
+    const projectNameWithoutWorkspace = project.projectName.split(' (')[0]; // Remove workspace suffix
+    
+    data.workspaces.forEach(workspace => {
+      if (workspace.data.currentSession) {
+        const currentSession = workspace.data.currentSession;
+        // Check if current session belongs to this project
+        const currentProjectName = currentSession.projectName;
+        const currentProjectPath = currentSession.projectPath;
+        
+        // Match by project path (more reliable) or by name
+        workspace.data.projects.forEach((workspaceProject, projectPath) => {
+          if ((currentProjectPath === projectPath || 
+               currentProjectPath === project.projectPath ||
+               currentProjectName === projectNameWithoutWorkspace ||
+               currentProjectName === project.projectName) &&
+              workspaceProject === project) {
+            totalTime += currentSession.totalTime;
+          }
+        });
+      }
+    });
+
+    return totalTime;
   }
 
   private getTodaySummaryItems(data: AggregatedData): GlobalSummaryItem[] {
@@ -306,7 +360,14 @@ export class GlobalSummaryViewProvider implements vscode.TreeDataProvider<Global
             );
             if (sessionTime > 0) {
               workspaceRangeTime += sessionTime;
-            sessionCount++;
+              sessionCount++;
+            }
+          } else {
+            // Ongoing sessions without endTime - calculate time if they started in this range
+            const sessionStart = new Date(session.startTime);
+            if (sessionStart >= rangeStart && sessionStart <= rangeEnd) {
+              workspaceRangeTime += session.totalTime;
+              sessionCount++;
             }
           }
         });
@@ -388,6 +449,12 @@ export class GlobalSummaryViewProvider implements vscode.TreeDataProvider<Global
               rangeStart,
               rangeEnd
             );
+          } else {
+            // Ongoing sessions without endTime - calculate time if they started in this range
+            const sessionStart = new Date(session.startTime);
+            if (sessionStart >= rangeStart && sessionStart <= rangeEnd) {
+              totalTime += session.totalTime;
+            }
           }
         });
       });
@@ -504,12 +571,19 @@ export class GlobalSummaryViewProvider implements vscode.TreeDataProvider<Global
         
         project.sessions.forEach(session => {
           if (session.endTime) {
+            // Completed sessions
             weekTime += calculateSessionTimeInRange(
               session.startTime,
               session.totalTime,
               weekStart,
               weekEnd
             );
+          } else {
+            // Ongoing sessions without endTime - calculate time if they started in this week
+            const sessionStart = new Date(session.startTime);
+            if (sessionStart >= weekStart && sessionStart <= weekEnd) {
+              weekTime += session.totalTime;
+            }
           }
         });
 
@@ -595,12 +669,19 @@ export class GlobalSummaryViewProvider implements vscode.TreeDataProvider<Global
         
         project.sessions.forEach(session => {
           if (session.endTime) {
+            // Completed sessions
             monthTime += calculateSessionTimeInRange(
               session.startTime,
               session.totalTime,
               monthStart,
               monthEnd
             );
+          } else {
+            // Ongoing sessions without endTime - calculate time if they started in this month
+            const sessionStart = new Date(session.startTime);
+            if (sessionStart >= monthStart && sessionStart <= monthEnd) {
+              monthTime += session.totalTime;
+            }
           }
         });
 
