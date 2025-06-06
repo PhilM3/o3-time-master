@@ -253,11 +253,14 @@ export class GlobalSummaryViewProvider implements vscode.TreeDataProvider<Global
    * and including any current active session for this project
    */
   private calculateActualProjectTime(project: ProjectStats, data: AggregatedData): number {
-    // Sum all session times
+    // Sum only completed session times (sessions with endTime)
     let totalTime = 0;
     
     project.sessions.forEach(session => {
-      totalTime += session.totalTime;
+      if (session.endTime) {
+        // Only count completed sessions to avoid double counting with current session
+        totalTime += session.totalTime;
+      }
     });
 
     // Check if there's a current session for this project
@@ -362,13 +365,6 @@ export class GlobalSummaryViewProvider implements vscode.TreeDataProvider<Global
               workspaceRangeTime += sessionTime;
               sessionCount++;
             }
-          } else {
-            // Ongoing sessions without endTime - calculate time if they started in this range
-            const sessionStart = new Date(session.startTime);
-            if (sessionStart >= rangeStart && sessionStart <= rangeEnd) {
-              workspaceRangeTime += session.totalTime;
-              sessionCount++;
-            }
           }
         });
       });
@@ -449,12 +445,6 @@ export class GlobalSummaryViewProvider implements vscode.TreeDataProvider<Global
               rangeStart,
               rangeEnd
             );
-          } else {
-            // Ongoing sessions without endTime - calculate time if they started in this range
-            const sessionStart = new Date(session.startTime);
-            if (sessionStart >= rangeStart && sessionStart <= rangeEnd) {
-              totalTime += session.totalTime;
-            }
           }
         });
       });
@@ -514,23 +504,18 @@ export class GlobalSummaryViewProvider implements vscode.TreeDataProvider<Global
 
     let totalTime = 0;
 
-    // Calculate time from all sessions (completed and ongoing)
+    // Calculate time from completed sessions only
     project.sessions.forEach(session => {
       if (session.endTime) {
-        // Completed sessions
+        // Only count completed sessions to avoid double counting with current session
         totalTime += calculateSessionTimeInRange(
           session.startTime,
           session.totalTime,
           dayStart,
           dayEnd
         );
-      } else {
-        // Ongoing sessions without endTime - calculate time if they started today
-        const sessionStart = new Date(session.startTime);
-        if (sessionStart >= dayStart && sessionStart <= dayEnd) {
-          totalTime += session.totalTime;
-        }
       }
+      // Note: Ongoing sessions (without endTime) are handled via currentSession below
     });
 
     // Add current session if it's for this project and on this day
@@ -571,20 +556,15 @@ export class GlobalSummaryViewProvider implements vscode.TreeDataProvider<Global
         
         project.sessions.forEach(session => {
           if (session.endTime) {
-            // Completed sessions
+            // Only count completed sessions to avoid double counting with current session
             weekTime += calculateSessionTimeInRange(
               session.startTime,
               session.totalTime,
               weekStart,
               weekEnd
             );
-          } else {
-            // Ongoing sessions without endTime - calculate time if they started in this week
-            const sessionStart = new Date(session.startTime);
-            if (sessionStart >= weekStart && sessionStart <= weekEnd) {
-              weekTime += session.totalTime;
-            }
           }
+          // Note: Ongoing sessions (without endTime) are handled via currentSession below
         });
 
         // Add current session if it's for this project and overlaps with the week
@@ -669,20 +649,15 @@ export class GlobalSummaryViewProvider implements vscode.TreeDataProvider<Global
         
         project.sessions.forEach(session => {
           if (session.endTime) {
-            // Completed sessions
+            // Only count completed sessions to avoid double counting with current session
             monthTime += calculateSessionTimeInRange(
               session.startTime,
               session.totalTime,
               monthStart,
               monthEnd
             );
-          } else {
-            // Ongoing sessions without endTime - calculate time if they started in this month
-            const sessionStart = new Date(session.startTime);
-            if (sessionStart >= monthStart && sessionStart <= monthEnd) {
-              monthTime += session.totalTime;
-            }
           }
+          // Note: Ongoing sessions (without endTime) are handled via currentSession below
         });
 
         // Add current session if it's for this project and overlaps with the month
@@ -774,12 +749,6 @@ export class GlobalSummaryViewProvider implements vscode.TreeDataProvider<Global
           weekStart,
           weekEnd
         );
-      } else {
-        // Ongoing sessions without endTime - calculate time if they started in this week
-        const sessionStart = new Date(session.startTime);
-        if (sessionStart >= weekStart && sessionStart <= weekEnd) {
-          totalTime += session.totalTime;
-        }
       }
     });
 
