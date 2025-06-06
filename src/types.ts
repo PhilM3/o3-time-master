@@ -124,6 +124,9 @@ export interface ExtensionConfig {
   
   /** Minutes of idle time before automatically ending a session */
   autoEndIdleThreshold: number;
+  
+  /** Whether to automatically end session when switching projects */
+  autoEndSessionOnProjectChange: boolean;
 }
 
 /**

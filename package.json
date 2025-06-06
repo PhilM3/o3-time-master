@@ -143,6 +143,11 @@
           "minimum": 5,
           "maximum": 240,
           "description": "Minutes of idle time before automatically ending a session"
+        },
+        "o3-time-tracker.autoEndSessionOnProjectChange": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically end session when switching to a different project"
         }
       }
     },

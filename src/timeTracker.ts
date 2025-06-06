@@ -641,6 +641,11 @@ export class TimeTracker {
         await this.checkAndHandleMidnightCrossing();
       }
 
+      // Check for project change and switch sessions if needed
+      if (this.config.autoEndSessionOnProjectChange && this.trackingData.currentSession && !this.isPaused) {
+        await this.checkAndHandleProjectChange();
+      }
+
       // Check for auto-end session after idle time
       if (this.config.autoEndSessionAfterIdle && this.trackingData.currentSession && !this.isPaused) {
         await this.checkAndHandleIdleSessionEnd();
@@ -927,7 +932,8 @@ export class TimeTracker {
       saveInterval: config.get('saveInterval', 30),
       trackBackground: config.get('trackBackground', true),
       autoEndSessionAfterIdle: config.get('autoEndSessionAfterIdle', true),
-      autoEndIdleThreshold: config.get('autoEndIdleThreshold', 30)
+      autoEndIdleThreshold: config.get('autoEndIdleThreshold', 30),
+      autoEndSessionOnProjectChange: config.get('autoEndSessionOnProjectChange', true)
     };
   }
 
@@ -1161,6 +1167,39 @@ export class TimeTracker {
     const timeSinceLastActivity = now.getTime() - this.trackingData.currentSession.lastActiveTime.getTime();
     if (timeSinceLastActivity > idleThreshold) {
       await this.endCurrentSession();
+    }
+  }
+
+  /**
+   * Check for project change and switch sessions if needed
+   */
+  private async checkAndHandleProjectChange(): Promise<void> {
+    if (!this.trackingData.currentSession) {
+      return;
+    }
+
+    const currentProject = this.getCurrentProject();
+    if (!currentProject) {
+      // No project detected, end current session
+      this.logger.info('No project detected, ending current session');
+      await this.endCurrentSession();
+      return;
+    }
+
+    // Check if the current session is for a different project
+    if (this.trackingData.currentSession.projectPath !== currentProject.path) {
+      this.logger.info('Project change detected', {
+        oldProject: this.trackingData.currentSession.projectName,
+        newProject: currentProject.name,
+        oldPath: this.trackingData.currentSession.projectPath,
+        newPath: currentProject.path
+      });
+
+      // End the current session
+      await this.endCurrentSession();
+
+      // Start a new session for the new project
+      await this.startOrResumeSession();
     }
   }
 } 
