@@ -13,7 +13,7 @@ import {
   ActivityEvent, 
   Logger
 } from './types';
-import { formatStatusBarTime, formatDate, formatDetailedTime } from './timeUtils';
+import { formatStatusBarTime, formatDate, formatDetailedTime, safeTimeDifference } from './timeUtils';
 import { TimeViewProvider, ProjectsViewProvider } from './timeViewProvider';
 
 /**
@@ -658,8 +658,18 @@ export class TimeTracker {
         
         if (isActive) {
           // Add time since last active time to total time (only active time)
-          const timeSinceLastActive = now.getTime() - this.trackingData.currentSession.lastActiveTime.getTime();
-          this.trackingData.currentSession.totalTime += timeSinceLastActive;
+          const timeSinceLastActive = safeTimeDifference(now, this.trackingData.currentSession.lastActiveTime, 1);
+          
+          if (timeSinceLastActive > 0) {
+            this.trackingData.currentSession.totalTime += timeSinceLastActive;
+          } else {
+            // Log warning if time calculation failed
+            this.logger.warn('Invalid time difference detected, skipping time addition', {
+              lastActiveTime: this.trackingData.currentSession.lastActiveTime.toISOString(),
+              now: now.toISOString()
+            });
+          }
+          
           this.trackingData.currentSession.lastActiveTime = now;
           this.trackingData.currentSession.lastActivity = now;
           this.trackingData.lastActivity = now;
@@ -855,8 +865,10 @@ export class TimeTracker {
     
     // Add any remaining active time if user was active when stopping
     if (this.activityMonitor.isActive()) {
-      const remainingActiveTime = now.getTime() - session.lastActiveTime.getTime();
-      session.totalTime += remainingActiveTime;
+      const remainingActiveTime = safeTimeDifference(now, session.lastActiveTime, 1);
+      if (remainingActiveTime > 0) {
+        session.totalTime += remainingActiveTime;
+      }
     }
     // Note: totalTime now contains only active time, not total elapsed time
 
@@ -1123,16 +1135,16 @@ export class TimeTracker {
       endTime: endOfYesterday.toISOString()
     });
 
-    // Start a new session for today at midnight
+    // Start a new session for today - but start from current time, not midnight
     const newSession: TimeSession = {
       id: this.generateSessionId(),
       projectName: currentSession.projectName,
       projectPath: currentSession.projectPath,
-      startTime: new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0), // Start of today
+      startTime: now, // BUGFIX: Use current time as start, not midnight
       totalTime: 0,
       isActive: true,
       lastActivity: now,
-      lastActiveTime: now,
+      lastActiveTime: now, // Consistent with startTime
       textChanges: 0,
       cursorMovements: 0
     };

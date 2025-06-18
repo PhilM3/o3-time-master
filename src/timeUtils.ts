@@ -189,4 +189,27 @@ export const calculateSessionTimeInRange = (
   }
   
   return 0;
+};
+
+/**
+ * Safely calculate time difference ensuring non-negative results
+ * @param endTime End time
+ * @param startTime Start time
+ * @param maxDiffMinutes Maximum allowed difference in minutes (default: 60)
+ * @returns Safe time difference in milliseconds, or 0 if invalid
+ */
+export const safeTimeDifference = (
+  endTime: Date,
+  startTime: Date,
+  maxDiffMinutes: number = 60
+): number => {
+  const diff = endTime.getTime() - startTime.getTime();
+  const maxDiffMs = maxDiffMinutes * 60 * 1000;
+  
+  // Return 0 if difference is negative or exceeds maximum
+  if (diff < 0 || diff > maxDiffMs) {
+    return 0;
+  }
+  
+  return diff;
 }; 
