@@ -709,35 +709,11 @@ export class TimeTracker {
         // Auto-end session during sleep if configured
         if (this.trackingData.currentSession && !this.isPaused) {
           if (this.config.autoEndSessionAfterIdle) {
-            // End the session at the sleep time, not current time
-            if (this.trackingData.currentSession.isActive) {
-              const sleepTime = event.timestamp;
-              const timeSinceLastActivity = sleepTime.getTime() - this.trackingData.currentSession.lastActiveTime.getTime();
-              
-              // Only add active time if user was actually active before sleep
-              if (timeSinceLastActivity < (this.config.idleThreshold * 60 * 1000)) {
-                this.trackingData.currentSession.totalTime += timeSinceLastActivity;
-              }
-              
-              // Set end time to sleep time instead of current time
-              this.trackingData.currentSession.endTime = sleepTime;
-              this.trackingData.currentSession.isActive = false;
-              this.trackingData.currentSession.lastActivity = sleepTime;
-              
-              // Update project stats
-              const projectStats = this.trackingData.projects.get(this.trackingData.currentSession.projectPath);
-              if (projectStats) {
-                this.recalculateProjectStats(projectStats);
-              }
-              
-              const sessionDuration = this.trackingData.currentSession.totalTime;
-              delete this.trackingData.currentSession;
-              await this.storage.save(this.trackingData);
-              
-              this.logger.info('Session ended due to sleep', { 
-                duration: formatDetailedTime(sessionDuration) 
-              });
-            }
+            const sleepTime = event.timestamp;
+            
+            // End the session cleanly, providing the exact sleep time
+            await this.endCurrentSession(sleepTime);
+
           } else {
             // Just pause if auto-end is disabled
             this.trackingData.currentSession.isActive = false;
@@ -852,20 +828,22 @@ export class TimeTracker {
 
   /**
    * End the current session
+   * @param endTime Optional end time for the session
    */
-  private async endCurrentSession(): Promise<void> {
+  private async endCurrentSession(endTime?: Date): Promise<void> {
     if (!this.trackingData.currentSession) {
       return;
     }
 
     const session = this.trackingData.currentSession;
-    const now = new Date();
-    session.endTime = now;
+    const finalEndTime = endTime || session.endTime || new Date();
+
+    session.endTime = finalEndTime;
     session.isActive = false;
     
     // Add any remaining active time if user was active when stopping
     if (this.activityMonitor.isActive()) {
-      const remainingActiveTime = safeTimeDifference(now, session.lastActiveTime, 1);
+      const remainingActiveTime = safeTimeDifference(finalEndTime, session.lastActiveTime, this.config.idleThreshold);
       if (remainingActiveTime > 0) {
         session.totalTime += remainingActiveTime;
       }
